@@ -13,5 +13,9 @@ $env = [
 
 return [
     'database' => $env,
+    'ai_text_generation' => [
+        'url' => getenv('AI_TEXT_GENERATION_URL') ?: '',
+        'api_key' => getenv('AI_TEXT_GENERATION_API_KEY') ?: '',
+    ],
 ];
 

@@ -51,8 +51,8 @@ class StoryRepository
     {
         $now = (new \DateTimeImmutable())->format('Y-m-d H:i:s');
 
-        $sql = 'INSERT INTO stories (title, type, plot, teachings, duration_minutes, created_at, updated_at)
-                VALUES (:title, :type, :plot, :teachings, :duration_minutes, :created_at, :updated_at)';
+        $sql = 'INSERT INTO stories (title, type, plot, teachings, other_notes, duration_minutes, created_at, updated_at)
+                VALUES (:title, :type, :plot, :teachings, :other_notes, :duration_minutes, :created_at, :updated_at)';
 
         $stmt = $this->pdo->prepare($sql);
         $stmt->execute([
@@ -60,6 +60,7 @@ class StoryRepository
             ':type' => $data['type'],
             ':plot' => $data['plot'],
             ':teachings' => $data['teachings'],
+            ':other_notes' => $data['other_notes'] ?? null,
             ':duration_minutes' => $data['duration_minutes'] ?? null,
             ':created_at' => $now,
             ':updated_at' => $now,
@@ -89,6 +90,7 @@ class StoryRepository
             'type',
             'plot',
             'teachings',
+            'other_notes',
             'final_text_generation_id',
             'final_audio_generation_id',
             'duration_minutes',

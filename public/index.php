@@ -46,6 +46,11 @@ $storyRepository = new \App\Repositories\StoryRepository($pdo);
 $textGenerationRepository = new \App\Repositories\TextGenerationRepository($pdo);
 $audioGenerationRepository = new \App\Repositories\AudioGenerationRepository($pdo);
 
+$textGenerationService = new \App\Services\TextGenerationService(
+    $config['ai_text_generation']['url'],
+    $config['ai_text_generation']['api_key'] ?: null
+);
+
 $storyController = new \App\Controllers\StoryController(
     $storyRepository,
     $textGenerationRepository,
@@ -54,7 +59,8 @@ $storyController = new \App\Controllers\StoryController(
 
 $textGenerationController = new \App\Controllers\TextGenerationController(
     $textGenerationRepository,
-    $storyRepository
+    $storyRepository,
+    $textGenerationService
 );
 
 $audioGenerationController = new \App\Controllers\AudioGenerationController(
@@ -75,6 +81,7 @@ $router->add('PATCH', '/api/stories/{id}/final-generations', [$storyController, 
 // Text generation routes
 $router->add('GET', '/api/stories/{id}/text-generations', [$textGenerationController, 'index']);
 $router->add('POST', '/api/stories/{id}/text-generations', [$textGenerationController, 'store']);
+$router->add('POST', '/api/stories/{id}/generate-text', [$textGenerationController, 'generateForStory']);
 
 // Audio generation routes
 $router->add('GET', '/api/stories/{id}/audio-generations', [$audioGenerationController, 'index']);

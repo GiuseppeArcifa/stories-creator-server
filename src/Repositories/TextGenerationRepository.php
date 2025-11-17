@@ -75,6 +75,33 @@ class TextGenerationRepository
         return $textGeneration;
     }
 
+    /**
+     * Crea multiple generazioni in una transazione
+     *
+     * @param array<int, array<string, mixed>> $generationsData
+     *
+     * @return array<int, TextGeneration>
+     */
+    public function createBatch(array $generationsData): array
+    {
+        $this->pdo->beginTransaction();
+
+        try {
+            $generations = [];
+
+            foreach ($generationsData as $data) {
+                $generations[] = $this->create($data);
+            }
+
+            $this->pdo->commit();
+
+            return $generations;
+        } catch (\Throwable $e) {
+            $this->pdo->rollBack();
+            throw $e;
+        }
+    }
+
     public function belongsToStory(int $id, int $storyId): bool
     {
         $stmt = $this->pdo->prepare('SELECT COUNT(*) FROM text_generations WHERE id = :id AND story_id = :story_id');

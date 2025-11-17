@@ -5,6 +5,7 @@ CREATE TABLE IF NOT EXISTS `stories` (
     `type` VARCHAR(50) NOT NULL,
     `plot` TEXT NOT NULL,
     `teachings` TEXT NOT NULL,
+    `other_notes` TEXT NULL,
     `final_text_generation_id` INT UNSIGNED NULL,
     `final_audio_generation_id` INT UNSIGNED NULL,
     `duration_minutes` INT NULL,
