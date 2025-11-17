@@ -30,6 +30,7 @@ stories-creator-server/
 
 ## API Overview
 
+- `GET /api` → elenco degli endpoint disponibili
 - `GET /api/stories?limit=50&offset=0`
 - `GET /api/stories/{id}`
 - `POST /api/stories`

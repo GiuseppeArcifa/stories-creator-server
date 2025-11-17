@@ -7,7 +7,7 @@ namespace App;
 class Router
 {
     /**
-     * @var array<int, array{method:string, regex:string, handler:callable}>
+     * @var array<int, array{method:string, path:string, regex:string, handler:callable}>
      */
     private array $routes = [];
 
@@ -17,6 +17,7 @@ class Router
 
         $this->routes[] = [
             'method' => strtoupper($method),
+            'path' => $path,
             'regex' => $regex,
             'handler' => $handler,
         ];
@@ -44,6 +45,20 @@ class Router
         }
 
         jsonError('Route not found', 404);
+    }
+
+    /**
+     * @return array<int, array{method:string, path:string}>
+     */
+    public function getRoutes(): array
+    {
+        return array_map(
+            static fn (array $route): array => [
+                'method' => $route['method'],
+                'path' => $route['path'],
+            ],
+            $this->routes
+        );
     }
 
     private function convertPathToRegex(string $path): string

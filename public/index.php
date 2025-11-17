@@ -42,6 +42,11 @@ $router->add('POST', '/api/stories', [$storyController, 'store']);
 $router->add('PUT', '/api/stories/{id}', [$storyController, 'update']);
 $router->add('PATCH', '/api/stories/{id}', [$storyController, 'update']);
 $router->add('DELETE', '/api/stories/{id}', [$storyController, 'destroy']);
+$router->add('GET', '/api', static function () use ($router): void {
+    jsonResponse([
+        'routes' => $router->getRoutes(),
+    ]);
+});
 
 try {
     $router->dispatch($method, $path);
