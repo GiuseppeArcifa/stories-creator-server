@@ -9,10 +9,14 @@ use RuntimeException;
 
 class SchemaManager
 {
-    public function __construct(
-        private PDO $pdo,
-        private string $schemaPath
-    ) {
+    private PDO $pdo;
+
+    private string $schemaPath;
+
+    public function __construct(PDO $pdo, string $schemaPath)
+    {
+        $this->pdo = $pdo;
+        $this->schemaPath = $schemaPath;
     }
 
     public function ensureStoriesTable(): void
