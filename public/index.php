@@ -36,21 +36,51 @@ $pdo = \App\Database\Connection::make($config['database']);
 
 try {
     $schemaManager = new \App\Database\SchemaManager($pdo, __DIR__ . '/../database/schema.sql');
-    $schemaManager->ensureStoriesTable();
+    $schemaManager->ensureAllTables();
 } catch (Throwable $schemaException) {
     jsonError('Unable to prepare database: ' . $schemaException->getMessage(), 500);
     exit;
 }
 
 $storyRepository = new \App\Repositories\StoryRepository($pdo);
-$storyController = new \App\Controllers\StoryController($storyRepository);
+$textGenerationRepository = new \App\Repositories\TextGenerationRepository($pdo);
+$audioGenerationRepository = new \App\Repositories\AudioGenerationRepository($pdo);
 
+$storyController = new \App\Controllers\StoryController(
+    $storyRepository,
+    $textGenerationRepository,
+    $audioGenerationRepository
+);
+
+$textGenerationController = new \App\Controllers\TextGenerationController(
+    $textGenerationRepository,
+    $storyRepository
+);
+
+$audioGenerationController = new \App\Controllers\AudioGenerationController(
+    $audioGenerationRepository,
+    $storyRepository,
+    $textGenerationRepository
+);
+
+// Story routes
 $router->add('GET', '/api/stories', [$storyController, 'index']);
 $router->add('GET', '/api/stories/{id}', [$storyController, 'show']);
 $router->add('POST', '/api/stories', [$storyController, 'store']);
 $router->add('PUT', '/api/stories/{id}', [$storyController, 'update']);
 $router->add('PATCH', '/api/stories/{id}', [$storyController, 'update']);
 $router->add('DELETE', '/api/stories/{id}', [$storyController, 'destroy']);
+$router->add('PATCH', '/api/stories/{id}/final-generations', [$storyController, 'updateFinalGenerations']);
+
+// Text generation routes
+$router->add('GET', '/api/stories/{id}/text-generations', [$textGenerationController, 'index']);
+$router->add('POST', '/api/stories/{id}/text-generations', [$textGenerationController, 'store']);
+
+// Audio generation routes
+$router->add('GET', '/api/stories/{id}/audio-generations', [$audioGenerationController, 'index']);
+$router->add('POST', '/api/stories/{id}/audio-generations', [$audioGenerationController, 'store']);
+
+// API info route
 $router->add('GET', '/api', static function () use ($router): void {
     jsonResponse([
         'routes' => $router->getRoutes(),

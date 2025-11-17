@@ -51,8 +51,8 @@ class StoryRepository
     {
         $now = (new \DateTimeImmutable())->format('Y-m-d H:i:s');
 
-        $sql = 'INSERT INTO stories (title, type, plot, teachings, generation, audio_file_id, duration_minutes, full_text, created_at, updated_at)
-                VALUES (:title, :type, :plot, :teachings, :generation, :audio_file_id, :duration_minutes, :full_text, :created_at, :updated_at)';
+        $sql = 'INSERT INTO stories (title, type, plot, teachings, duration_minutes, created_at, updated_at)
+                VALUES (:title, :type, :plot, :teachings, :duration_minutes, :created_at, :updated_at)';
 
         $stmt = $this->pdo->prepare($sql);
         $stmt->execute([
@@ -60,10 +60,7 @@ class StoryRepository
             ':type' => $data['type'],
             ':plot' => $data['plot'],
             ':teachings' => $data['teachings'],
-            ':generation' => $data['generation'] ?? '',
-            ':audio_file_id' => $data['audio_file_id'],
             ':duration_minutes' => $data['duration_minutes'] ?? null,
-            ':full_text' => $data['full_text'] ?? null,
             ':created_at' => $now,
             ':updated_at' => $now,
         ]);
@@ -92,10 +89,9 @@ class StoryRepository
             'type',
             'plot',
             'teachings',
-            'generation',
-            'audio_file_id',
+            'final_text_generation_id',
+            'final_audio_generation_id',
             'duration_minutes',
-            'full_text',
         ];
 
         foreach ($updatable as $field) {
@@ -103,6 +99,35 @@ class StoryRepository
                 $fields[] = sprintf('%s = :%s', $field, $field);
                 $params[":{$field}"] = $data[$field];
             }
+        }
+
+        if (empty($fields)) {
+            return $this->find($id);
+        }
+
+        $fields[] = 'updated_at = :updated_at';
+        $params[':updated_at'] = (new \DateTimeImmutable())->format('Y-m-d H:i:s');
+
+        $sql = 'UPDATE stories SET ' . implode(', ', $fields) . ' WHERE id = :id';
+        $stmt = $this->pdo->prepare($sql);
+        $stmt->execute($params);
+
+        return $this->find($id);
+    }
+
+    public function updateFinalGenerations(int $id, ?int $finalTextGenerationId, ?int $finalAudioGenerationId): ?Story
+    {
+        $fields = [];
+        $params = [':id' => $id];
+
+        if ($finalTextGenerationId !== null) {
+            $fields[] = 'final_text_generation_id = :final_text_generation_id';
+            $params[':final_text_generation_id'] = $finalTextGenerationId;
+        }
+
+        if ($finalAudioGenerationId !== null) {
+            $fields[] = 'final_audio_generation_id = :final_audio_generation_id';
+            $params[':final_audio_generation_id'] = $finalAudioGenerationId;
         }
 
         if (empty($fields)) {

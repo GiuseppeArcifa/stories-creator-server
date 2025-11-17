@@ -11,10 +11,9 @@ class Story
     public string $type;
     public string $plot;
     public string $teachings;
-    public string $generation;
-    public string $audio_file_id;
+    public ?int $final_text_generation_id;
+    public ?int $final_audio_generation_id;
     public ?int $duration_minutes;
-    public ?string $full_text;
     public string $created_at;
     public string $updated_at;
 
@@ -28,10 +27,9 @@ class Story
         $this->type = (string) ($attributes['type'] ?? '');
         $this->plot = (string) ($attributes['plot'] ?? '');
         $this->teachings = (string) ($attributes['teachings'] ?? '');
-        $this->generation = (string) ($attributes['generation'] ?? '');
-        $this->audio_file_id = (string) ($attributes['audio_file_id'] ?? '');
+        $this->final_text_generation_id = isset($attributes['final_text_generation_id']) ? (int) $attributes['final_text_generation_id'] : null;
+        $this->final_audio_generation_id = isset($attributes['final_audio_generation_id']) ? (int) $attributes['final_audio_generation_id'] : null;
         $this->duration_minutes = isset($attributes['duration_minutes']) ? (int) $attributes['duration_minutes'] : null;
-        $this->full_text = $attributes['full_text'] ?? null;
         $this->created_at = (string) ($attributes['created_at'] ?? '');
         $this->updated_at = (string) ($attributes['updated_at'] ?? '');
     }
@@ -47,10 +45,9 @@ class Story
             'type' => $this->type,
             'plot' => $this->plot,
             'teachings' => $this->teachings,
-            'generation' => $this->generation,
-            'audio_file_id' => $this->audio_file_id,
+            'final_text_generation_id' => $this->final_text_generation_id,
+            'final_audio_generation_id' => $this->final_audio_generation_id,
             'duration_minutes' => $this->duration_minutes,
-            'full_text' => $this->full_text,
             'created_at' => $this->created_at,
             'updated_at' => $this->updated_at,
         ];
