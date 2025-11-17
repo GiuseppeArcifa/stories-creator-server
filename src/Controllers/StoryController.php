@@ -8,8 +8,11 @@ use App\Repositories\StoryRepository;
 
 class StoryController
 {
-    public function __construct(private readonly StoryRepository $repository)
+    private StoryRepository $repository;
+
+    public function __construct(StoryRepository $repository)
     {
+        $this->repository = $repository;
     }
 
     /**
