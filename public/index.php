@@ -33,6 +33,15 @@ $path = rtrim($path, '/') ?: '/';
 $router = new \App\Router();
 
 $pdo = \App\Database\Connection::make($config['database']);
+
+try {
+    $schemaManager = new \App\Database\SchemaManager($pdo, __DIR__ . '/../database/schema.sql');
+    $schemaManager->ensureStoriesTable();
+} catch (Throwable $schemaException) {
+    jsonError('Unable to prepare database: ' . $schemaException->getMessage(), 500);
+    exit;
+}
+
 $storyRepository = new \App\Repositories\StoryRepository($pdo);
 $storyController = new \App\Controllers\StoryController($storyRepository);
 

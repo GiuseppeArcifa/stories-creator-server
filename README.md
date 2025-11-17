@@ -63,6 +63,7 @@ All responses are JSON (`Content-Type: application/json`). Errors follow `{ "err
    ```bash
    mysql -u your_user -p stories_creator < database/schema.sql
    ```
+   > Nota: all’avvio dell’API il server controlla automaticamente l’esistenza della tabella `stories` e, se mancante o con colonne obsolete, applica lo schema richiesto. Lo script rimane utile per eseguire l’inizializzazione manuale o in ambienti CI.
 
 ## Run the Development Server
 
