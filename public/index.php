@@ -54,7 +54,8 @@ $textGenerationService = new \App\Services\TextGenerationService(
 $storyController = new \App\Controllers\StoryController(
     $storyRepository,
     $textGenerationRepository,
-    $audioGenerationRepository
+    $audioGenerationRepository,
+    $textGenerationService
 );
 
 $textGenerationController = new \App\Controllers\TextGenerationController(

@@ -37,17 +37,26 @@ class TextGeneration
      */
     public function toArray(): array
     {
-        return [
+        $data = [
             'id' => $this->id,
-            'story_id' => $this->story_id,
             'full_text' => $this->full_text,
-            'plot' => $this->plot,
-            'teachings' => $this->teachings,
-            'duration_minutes' => $this->duration_minutes,
             'provider' => $this->provider,
             'model' => $this->model,
             'created_at' => $this->created_at,
         ];
+
+        // Includi solo i campi non null per evitare ridondanza
+        if ($this->plot !== null) {
+            $data['plot'] = $this->plot;
+        }
+        if ($this->teachings !== null) {
+            $data['teachings'] = $this->teachings;
+        }
+        if ($this->duration_minutes !== null) {
+            $data['duration_minutes'] = $this->duration_minutes;
+        }
+
+        return $data;
     }
 }
 

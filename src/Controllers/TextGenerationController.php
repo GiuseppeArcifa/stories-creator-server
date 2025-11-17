@@ -183,9 +183,6 @@ class TextGenerationController
             $generationsData[] = [
                 'story_id' => $storyId,
                 'full_text' => $generation['generated_text'],
-                'plot' => $data['plot'],
-                'teachings' => $data['teachings'],
-                'duration_minutes' => (int) $data['duration'],
                 'provider' => 'ai_service',
                 'model' => 'default-model',
             ];
