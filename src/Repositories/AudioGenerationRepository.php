@@ -31,6 +31,47 @@ class AudioGenerationRepository
         return array_map(static fn (array $row) => new AudioGeneration($row), $rows);
     }
 
+    /**
+     * Recupera tutte le generazioni audio per multiple story_id (query ottimizzata)
+     *
+     * @param array<int> $storyIds
+     *
+     * @return array<int, array<int, AudioGeneration>> Array associativo con story_id come chiave
+     */
+    public function findByStoryIds(array $storyIds): array
+    {
+        if (empty($storyIds)) {
+            return [];
+        }
+
+        // Crea placeholders per la query IN
+        $placeholders = implode(',', array_fill(0, count($storyIds), '?'));
+
+        $stmt = $this->pdo->prepare(sprintf(
+            'SELECT * FROM audio_generations WHERE story_id IN (%s) ORDER BY story_id, created_at DESC',
+            $placeholders
+        ));
+
+        $stmt->execute($storyIds);
+
+        $rows = $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
+
+        // Raggruppa per story_id
+        $grouped = [];
+
+        foreach ($rows as $row) {
+            $storyId = (int) $row['story_id'];
+
+            if (!isset($grouped[$storyId])) {
+                $grouped[$storyId] = [];
+            }
+
+            $grouped[$storyId][] = new AudioGeneration($row);
+        }
+
+        return $grouped;
+    }
+
     public function find(int $id): ?AudioGeneration
     {
         $stmt = $this->pdo->prepare('SELECT * FROM audio_generations WHERE id = :id LIMIT 1');

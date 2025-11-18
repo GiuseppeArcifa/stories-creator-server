@@ -39,25 +39,46 @@ class StoryController
     {
         $limit = isset($_GET['limit']) ? (int) $_GET['limit'] : 50;
         $offset = isset($_GET['offset']) ? (int) $_GET['offset'] : 0;
-        $includeGenerations = isset($_GET['include_generations']) && (int) $_GET['include_generations'] === 1;
 
         $limit = max(1, min($limit, 100));
         $offset = max(0, $offset);
 
+        // Recupera le storie
         $stories = $this->repository->all($limit, $offset);
-        $payload = array_map(function ($story) use ($includeGenerations) {
-            $storyData = $story->toArray();
 
-            if ($includeGenerations) {
-                $storyData['text_generations'] = array_map(
-                    fn ($gen) => $gen->toArray(),
-                    $this->textGenerationRepository->findByStoryId($story->id ?? 0)
-                );
-                $storyData['audio_generations'] = array_map(
-                    fn ($gen) => $gen->toArray(),
-                    $this->audioGenerationRepository->findByStoryId($story->id ?? 0)
-                );
-            }
+        // Estrai gli ID delle storie
+        $storyIds = array_filter(
+            array_map(static fn ($story) => $story->id, $stories),
+            static fn ($id) => $id !== null
+        );
+
+        // Recupera tutte le generazioni in query ottimizzate (una query per tipo)
+        $textGenerationsByStory = [];
+        $audioGenerationsByStory = [];
+
+        if (!empty($storyIds)) {
+            $textGenerationsByStory = $this->textGenerationRepository->findByStoryIds($storyIds);
+            $audioGenerationsByStory = $this->audioGenerationRepository->findByStoryIds($storyIds);
+        }
+
+        // Costruisci la risposta con le generazioni annidate
+        $payload = array_map(function ($story) use ($textGenerationsByStory, $audioGenerationsByStory) {
+            $storyData = $story->toArray();
+            $storyId = $story->id ?? 0;
+
+            // Aggiungi sempre text_generations (anche se vuoto)
+            $textGens = $textGenerationsByStory[$storyId] ?? [];
+            $storyData['text_generations'] = array_map(
+                static fn ($gen) => $gen->toArray(),
+                $textGens
+            );
+
+            // Aggiungi sempre audio_generations (anche se vuoto)
+            $audioGens = $audioGenerationsByStory[$storyId] ?? [];
+            $storyData['audio_generations'] = array_map(
+                static fn ($gen) => $gen->toArray(),
+                $audioGens
+            );
 
             return $storyData;
         }, $stories);

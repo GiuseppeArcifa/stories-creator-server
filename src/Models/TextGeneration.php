@@ -46,12 +46,7 @@ class TextGeneration
         ];
 
         // Includi solo i campi non null per evitare ridondanza
-        if ($this->plot !== null) {
-            $data['plot'] = $this->plot;
-        }
-        if ($this->teachings !== null) {
-            $data['teachings'] = $this->teachings;
-        }
+        // NOTA: plot e teachings sono esclusi perché ridondanti rispetto alla storia
         if ($this->duration_minutes !== null) {
             $data['duration_minutes'] = $this->duration_minutes;
         }

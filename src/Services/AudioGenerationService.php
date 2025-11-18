@@ -56,7 +56,7 @@ class AudioGenerationService
             CURLOPT_RETURNTRANSFER => true,
             CURLOPT_POSTFIELDS => $jsonPayload,
             CURLOPT_HTTPHEADER => $headers,
-            CURLOPT_TIMEOUT => 300, // 5 minuti timeout (generazione audio può richiedere più tempo)
+            CURLOPT_TIMEOUT => 60 * 60, // 1 ora timeout (generazione audio può richiedere più tempo)
             CURLOPT_CONNECTTIMEOUT => 10,
         ]);
 
@@ -79,6 +79,8 @@ class AudioGenerationService
         if ($decoded === null || !is_array($decoded)) {
             throw new RuntimeException('Invalid JSON response from API');
         }
+
+        $decoded = current( $response );
 
         if (!isset($decoded['audio_file_id']) || !is_string($decoded['audio_file_id'])) {
             throw new RuntimeException('Response missing or invalid "audio_file_id"');
