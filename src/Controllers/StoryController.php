@@ -7,6 +7,7 @@ namespace App\Controllers;
 use App\Repositories\AudioGenerationRepository;
 use App\Repositories\StoryRepository;
 use App\Repositories\TextGenerationRepository;
+use App\Services\AudioGenerationService;
 use App\Services\TextGenerationService;
 
 class StoryController
@@ -15,17 +16,20 @@ class StoryController
     private TextGenerationRepository $textGenerationRepository;
     private AudioGenerationRepository $audioGenerationRepository;
     private TextGenerationService $textGenerationService;
+    private AudioGenerationService $audioGenerationService;
 
     public function __construct(
         StoryRepository $repository,
         TextGenerationRepository $textGenerationRepository,
         AudioGenerationRepository $audioGenerationRepository,
-        TextGenerationService $textGenerationService
+        TextGenerationService $textGenerationService,
+        AudioGenerationService $audioGenerationService
     ) {
         $this->repository = $repository;
         $this->textGenerationRepository = $textGenerationRepository;
         $this->audioGenerationRepository = $audioGenerationRepository;
         $this->textGenerationService = $textGenerationService;
+        $this->audioGenerationService = $audioGenerationService;
     }
 
     /**
@@ -298,6 +302,185 @@ class StoryController
         }
 
         return $missing;
+    }
+
+    /**
+     * @param array<string, string> $params
+     */
+    public function finalize(array $params): void
+    {
+        $storyId = (int) ($params['id'] ?? 0);
+
+        if ($storyId <= 0) {
+            jsonError('Invalid story id', 400);
+            return;
+        }
+
+        // 1) Validazioni iniziali
+        $story = $this->repository->find($storyId);
+
+        if (!$story) {
+            jsonError('Story not found', 404);
+            return;
+        }
+
+        $data = getJsonInput();
+
+        if (!isset($data['final_text_generation_id'])) {
+            jsonError('Missing required field: final_text_generation_id', 400);
+            return;
+        }
+
+        $finalTextGenerationId = (int) $data['final_text_generation_id'];
+
+        // Verifica che la text_generation definitiva esista e appartenga alla story
+        $finalTextGeneration = $this->textGenerationRepository->find($finalTextGenerationId);
+
+        if (!$finalTextGeneration) {
+            jsonError('Final text generation not found', 404);
+            return;
+        }
+
+        if (!$this->textGenerationRepository->belongsToStory($finalTextGenerationId, $storyId)) {
+            jsonError('Final text generation does not belong to this story', 400);
+            return;
+        }
+
+        // Valida le text_generations passate
+        if (!isset($data['text_generations']) || !is_array($data['text_generations'])) {
+            jsonError('Missing or invalid text_generations array', 400);
+            return;
+        }
+
+        foreach ($data['text_generations'] as $textGen) {
+            if (!isset($textGen['id']) || !isset($textGen['full_text'])) {
+                jsonError('Each text generation must have id and full_text', 400);
+                return;
+            }
+
+            $textGenId = (int) $textGen['id'];
+
+            if (!$this->textGenerationRepository->belongsToStory($textGenId, $storyId)) {
+                jsonError(sprintf('Text generation %d does not belong to this story', $textGenId), 400);
+                return;
+            }
+        }
+
+        // Avvia transazione (usa il PDO del repository)
+        $pdo = $this->textGenerationRepository->getPdo();
+        $pdo->beginTransaction();
+
+        try {
+            // 2) Aggiornamento delle generazioni testuali
+            foreach ($data['text_generations'] as $textGen) {
+                $updateData = [
+                    'full_text' => $textGen['full_text'],
+                ];
+
+                if (isset($textGen['plot'])) {
+                    $updateData['plot'] = $textGen['plot'];
+                }
+                if (isset($textGen['teachings'])) {
+                    $updateData['teachings'] = $textGen['teachings'];
+                }
+                if (isset($textGen['duration_minutes'])) {
+                    $updateData['duration_minutes'] = (int) $textGen['duration_minutes'];
+                }
+
+                $this->textGenerationRepository->update((int) $textGen['id'], $updateData);
+            }
+
+            // 3) Impostare la generazione testuale definitiva sulla story
+            $storyUpdateData = [
+                'final_text_generation_id' => $finalTextGenerationId,
+            ];
+
+            // Aggiorna duration_minutes della story con quella della generazione definitiva se presente
+            $finalTextGen = $this->textGenerationRepository->find($finalTextGenerationId);
+            if ($finalTextGen && $finalTextGen->duration_minutes !== null) {
+                $storyUpdateData['duration_minutes'] = $finalTextGen->duration_minutes;
+            }
+
+            $this->repository->update($storyId, $storyUpdateData);
+
+            // 4) Chiamata all'API esterna per generare l'audio
+            $finalTextGen = $this->textGenerationRepository->find($finalTextGenerationId);
+
+            if (!$finalTextGen) {
+                throw new \RuntimeException('Unable to fetch final text generation');
+            }
+
+            $audioPayload = [
+                'title' => $story->title,
+                'type' => $story->type,
+                'full_text' => $finalTextGen->full_text,
+                'teachings' => $story->teachings,
+                'duration' => $finalTextGen->duration_minutes ?? $story->duration_minutes,
+            ];
+
+            if ($story->other_notes !== null && $story->other_notes !== '') {
+                $audioPayload['otherNotes'] = $story->other_notes;
+            }
+
+            if (isset($data['audio_options'])) {
+                if (isset($data['audio_options']['voice_name'])) {
+                    $audioPayload['voice_name'] = $data['audio_options']['voice_name'];
+                }
+                if (isset($data['audio_options']['provider'])) {
+                    $audioPayload['provider'] = $data['audio_options']['provider'];
+                }
+            }
+
+            $audioResult = $this->audioGenerationService->generateAudio($audioPayload);
+
+            // 5) Salvataggio della generazione audio nel DB
+            $audioGenerationData = [
+                'story_id' => $storyId,
+                'text_generation_id' => $finalTextGenerationId,
+                'audio_file_id' => $audioResult['audio_file_id'],
+            ];
+
+            if (isset($audioResult['duration_seconds'])) {
+                $audioGenerationData['duration_seconds'] = $audioResult['duration_seconds'];
+            }
+
+            if (isset($data['audio_options']['provider'])) {
+                $audioGenerationData['provider'] = $data['audio_options']['provider'];
+            }
+
+            if (isset($data['audio_options']['voice_name'])) {
+                $audioGenerationData['voice_name'] = $data['audio_options']['voice_name'];
+            }
+
+            $audioGeneration = $this->audioGenerationRepository->create($audioGenerationData);
+
+            // 6) Impostare l'audio definitivo sulla story
+            $this->repository->update($storyId, [
+                'final_audio_generation_id' => $audioGeneration->id,
+            ]);
+
+            // 7) Commit della transazione
+            $pdo->commit();
+
+            // 8) Risposta API
+            $updatedStory = $this->repository->find($storyId);
+
+            if (!$updatedStory) {
+                throw new \RuntimeException('Unable to fetch updated story');
+            }
+
+            $textGenerations = $this->textGenerationRepository->findByStoryId($storyId);
+            $audioGenerations = $this->audioGenerationRepository->findByStoryId($storyId);
+
+            $response = $updatedStory->toArray();
+            $response['text_generations'] = array_map(static fn ($gen) => $gen->toArray(), $textGenerations);
+            $response['audio_generations'] = array_map(static fn ($gen) => $gen->toArray(), $audioGenerations);
+
+            jsonResponse($response, 200);
+        } catch (\Throwable $e) {
+            $pdo->rollBack();
+            jsonError('Audio generation service unavailable or returned invalid data: ' . $e->getMessage(), 502);
+        }
     }
 }
 

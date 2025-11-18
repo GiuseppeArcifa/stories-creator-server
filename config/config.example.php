@@ -13,5 +13,9 @@ return [
         'url' => getenv('AI_TEXT_GENERATION_URL') ?: '',
         'api_key' => getenv('AI_TEXT_GENERATION_API_KEY') ?: '',
     ],
+    'ai_audio_generation' => [
+        'url' => getenv('AI_AUDIO_GENERATION_URL') ?: '',
+        'api_key' => getenv('AI_AUDIO_GENERATION_API_KEY') ?: '',
+    ],
 ];
 

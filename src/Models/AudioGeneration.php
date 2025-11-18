@@ -35,16 +35,25 @@ class AudioGeneration
      */
     public function toArray(): array
     {
-        return [
+        $data = [
             'id' => $this->id,
-            'story_id' => $this->story_id,
             'text_generation_id' => $this->text_generation_id,
             'audio_file_id' => $this->audio_file_id,
-            'duration_seconds' => $this->duration_seconds,
-            'voice_name' => $this->voice_name,
-            'provider' => $this->provider,
             'created_at' => $this->created_at,
         ];
+
+        // Includi solo i campi non null per evitare ridondanza
+        if ($this->duration_seconds !== null) {
+            $data['duration_seconds'] = $this->duration_seconds;
+        }
+        if ($this->voice_name !== null) {
+            $data['voice_name'] = $this->voice_name;
+        }
+        if ($this->provider !== null) {
+            $data['provider'] = $this->provider;
+        }
+
+        return $data;
     }
 }
 

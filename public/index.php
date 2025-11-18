@@ -51,11 +51,17 @@ $textGenerationService = new \App\Services\TextGenerationService(
     $config['ai_text_generation']['api_key'] ?: null
 );
 
+$audioGenerationService = new \App\Services\AudioGenerationService(
+    $config['ai_audio_generation']['url'],
+    $config['ai_audio_generation']['api_key'] ?: null
+);
+
 $storyController = new \App\Controllers\StoryController(
     $storyRepository,
     $textGenerationRepository,
     $audioGenerationRepository,
-    $textGenerationService
+    $textGenerationService,
+    $audioGenerationService
 );
 
 $textGenerationController = new \App\Controllers\TextGenerationController(
@@ -78,6 +84,7 @@ $router->add('PUT', '/api/stories/{id}', [$storyController, 'update']);
 $router->add('PATCH', '/api/stories/{id}', [$storyController, 'update']);
 $router->add('DELETE', '/api/stories/{id}', [$storyController, 'destroy']);
 $router->add('PATCH', '/api/stories/{id}/final-generations', [$storyController, 'updateFinalGenerations']);
+$router->add('PATCH', '/api/stories/{id}/finalize', [$storyController, 'finalize']);
 
 // Text generation routes
 $router->add('GET', '/api/stories/{id}/text-generations', [$textGenerationController, 'index']);

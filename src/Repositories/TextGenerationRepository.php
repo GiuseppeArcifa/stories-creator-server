@@ -17,6 +17,11 @@ class TextGenerationRepository
         $this->pdo = $pdo;
     }
 
+    public function getPdo(): PDO
+    {
+        return $this->pdo;
+    }
+
     /**
      * @return array<int, TextGeneration>
      */
@@ -100,6 +105,41 @@ class TextGenerationRepository
             $this->pdo->rollBack();
             throw $e;
         }
+    }
+
+    /**
+     * @param array<string, mixed> $data
+     */
+    public function update(int $id, array $data): ?TextGeneration
+    {
+        $fields = [];
+        $params = [':id' => $id];
+
+        $updatable = [
+            'full_text',
+            'plot',
+            'teachings',
+            'duration_minutes',
+            'provider',
+            'model',
+        ];
+
+        foreach ($updatable as $field) {
+            if (array_key_exists($field, $data)) {
+                $fields[] = sprintf('%s = :%s', $field, $field);
+                $params[":{$field}"] = $data[$field];
+            }
+        }
+
+        if (empty($fields)) {
+            return $this->find($id);
+        }
+
+        $sql = 'UPDATE text_generations SET ' . implode(', ', $fields) . ' WHERE id = :id';
+        $stmt = $this->pdo->prepare($sql);
+        $stmt->execute($params);
+
+        return $this->find($id);
     }
 
     public function belongsToStory(int $id, int $storyId): bool

@@ -6,7 +6,7 @@ namespace App\Services;
 
 use RuntimeException;
 
-class TextGenerationService
+class AudioGenerationService
 {
     private string $apiUrl;
     private ?string $apiKey;
@@ -20,14 +20,14 @@ class TextGenerationService
     /**
      * @param array<string, mixed> $payload
      *
-     * @return array<int, array{generated_text: string}>
+     * @return array{audio_file_id: string, duration_seconds?: int}
      *
      * @throws RuntimeException
      */
-    public function generateText(array $payload): array
+    public function generateAudio(array $payload): array
     {
         if (empty($this->apiUrl)) {
-            throw new RuntimeException('AI text generation URL is not configured');
+            throw new RuntimeException('AI audio generation URL is not configured');
         }
 
         $ch = curl_init($this->apiUrl);
@@ -56,7 +56,7 @@ class TextGenerationService
             CURLOPT_RETURNTRANSFER => true,
             CURLOPT_POSTFIELDS => $jsonPayload,
             CURLOPT_HTTPHEADER => $headers,
-            CURLOPT_TIMEOUT => 60 * 60, // 1 hour
+            CURLOPT_TIMEOUT => 300, // 5 minuti timeout (generazione audio può richiedere più tempo)
             CURLOPT_CONNECTTIMEOUT => 10,
         ]);
 
@@ -80,27 +80,19 @@ class TextGenerationService
             throw new RuntimeException('Invalid JSON response from API');
         }
 
-        if (!isset($decoded['generations']) || !is_array($decoded['generations'])) {
-            throw new RuntimeException('Response missing "generations" array');
+        if (!isset($decoded['audio_file_id']) || !is_string($decoded['audio_file_id'])) {
+            throw new RuntimeException('Response missing or invalid "audio_file_id"');
         }
 
-        if (count($decoded['generations']) !== 3) {
-            throw new RuntimeException(sprintf('Expected 3 generations, got %d', count($decoded['generations'])));
+        $result = [
+            'audio_file_id' => $decoded['audio_file_id'],
+        ];
+
+        if (isset($decoded['duration_seconds']) && is_int($decoded['duration_seconds'])) {
+            $result['duration_seconds'] = $decoded['duration_seconds'];
         }
 
-        $generations = [];
-
-        foreach ($decoded['generations'] as $index => $generation) {
-            if (!isset($generation['generated_text']) || !is_string($generation['generated_text'])) {
-                throw new RuntimeException(sprintf('Generation %d missing or invalid "generated_text"', $index));
-            }
-
-            $generations[] = [
-                'generated_text' => $generation['generated_text'],
-            ];
-        }
-
-        return $generations;
+        return $result;
     }
 }
 
